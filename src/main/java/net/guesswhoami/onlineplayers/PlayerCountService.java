@@ -46,7 +46,7 @@ final class PlayerCountService {
     // on the public status page during quiet periods with no joins/leaves.
     private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(45);
 
-    private final Object plugin;
+    private final OnlinePlayersPlugin plugin;
     private final ProxyServer server;
     private final Path dataDirectory;
     private final Logger logger;
@@ -55,7 +55,10 @@ final class PlayerCountService {
     private final AtomicReference<PlayerCountFile> lastWritten = new AtomicReference<>();
 
     PlayerCountService(
-            final Object plugin, final ProxyServer server, final Path dataDirectory, final Logger logger) {
+            final OnlinePlayersPlugin plugin,
+            final ProxyServer server,
+            final Path dataDirectory,
+            final Logger logger) {
         this.plugin = plugin;
         this.server = server;
         this.dataDirectory = dataDirectory;

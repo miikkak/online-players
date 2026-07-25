@@ -17,7 +17,8 @@ class PlayerCountServiceTest {
     @Test
     void writeAtomicProducesGroupAndWorldReadableFile(@TempDir final Path dataDirectory) throws IOException {
         final PlayerCountService service =
-                new PlayerCountService(new Object(), null, dataDirectory, NOPLogger.NOP_LOGGER);
+                new PlayerCountService(
+                        new OnlinePlayersPlugin(null, null, null), null, dataDirectory, NOPLogger.NOP_LOGGER);
 
         final Path target = dataDirectory.resolve("online-players.json");
         service.writeAtomic(target, "{}");
@@ -31,7 +32,8 @@ class PlayerCountServiceTest {
     @Test
     void writeAtomicLeavesNoTempFileBehindOnSuccess(@TempDir final Path dataDirectory) throws IOException {
         final PlayerCountService service =
-                new PlayerCountService(new Object(), null, dataDirectory, NOPLogger.NOP_LOGGER);
+                new PlayerCountService(
+                        new OnlinePlayersPlugin(null, null, null), null, dataDirectory, NOPLogger.NOP_LOGGER);
 
         service.writeAtomic(dataDirectory.resolve("online-players.json"), "{}");
 

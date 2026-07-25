@@ -101,7 +101,7 @@ final class PlayerCountService {
 
     private void writeIfChanged() {
         final Map<String, Integer> servers = currentServerCounts();
-        final int total = server.getPlayerCount();
+        final int total = totalOf(servers);
 
         final PlayerCountFile previous = lastWritten.get();
         if (previous != null && previous.sameCounts(total, servers)) {
@@ -109,17 +109,17 @@ final class PlayerCountService {
         }
 
         logger.info("Refreshing {}: total={}, servers={}", outputFile, total, servers);
-        write(total, servers);
+        write(servers);
     }
 
     // Rewrites unconditionally, even if the counts haven't changed, so `updated` keeps advancing
     // during quiet periods - see HEARTBEAT_INTERVAL.
     private void heartbeat() {
-        write(server.getPlayerCount(), currentServerCounts());
+        write(currentServerCounts());
     }
 
-    private void write(final int total, final Map<String, Integer> servers) {
-        final PlayerCountFile snapshot = PlayerCountFile.now(total, servers);
+    private void write(final Map<String, Integer> servers) {
+        final PlayerCountFile snapshot = PlayerCountFile.now(totalOf(servers), servers);
         writeAtomic(outputFile, gson.toJson(snapshot));
         lastWritten.set(snapshot);
     }
@@ -132,6 +132,20 @@ final class PlayerCountService {
                     registeredServer.getPlayersConnected().size());
         }
         return servers;
+    }
+
+    // Derived from the same per-server snapshot rather than ProxyServer.getPlayerCount(), which
+    // is backed by a separate proxy-wide registry populated earlier in the connection lifecycle
+    // than RegisteredServer's own player list. Velocity fires ServerConnectedEvent *before*
+    // VelocityRegisteredServer.addPlayer() runs (the latter happens in a continuation chained
+    // after the event's future resolves), so at the moment our listener recomputes state,
+    // getPlayerCount() can already count a just-connected player while their destination
+    // server's connected-players list doesn't yet - deriving total from servers.values() instead
+    // keeps the file's own `sum(servers) == total` invariant intact even when the underlying
+    // Velocity state is momentarily mid-transition; the per-server figure catches up on the next
+    // event or heartbeat tick.
+    private static int totalOf(final Map<String, Integer> servers) {
+        return servers.values().stream().mapToInt(Integer::intValue).sum();
     }
 
     // Package-private (not private) so the permissions behavior is directly unit-testable.

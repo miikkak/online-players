@@ -46,6 +46,13 @@ final class PlayerCountService {
     // on the public status page during quiet periods with no joins/leaves.
     private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(45);
 
+    // Velocity fires ServerConnectedEvent/DisconnectEvent *before* it finishes mutating the
+    // affected RegisteredServer's connected-player list (that happens in a continuation chained
+    // after the event's future resolves) - see totalOf()'s javadoc. Recomputing counts
+    // synchronously in the event handler can therefore observe stale per-server state; deferring
+    // the recompute by one short tick lets that continuation run first.
+    private static final Duration EVENT_SETTLE_DELAY = Duration.ofMillis(50);
+
     private final OnlinePlayersPlugin plugin;
     private final ProxyServer server;
     private final Path dataDirectory;
@@ -91,12 +98,16 @@ final class PlayerCountService {
 
     @Subscribe
     public void onServerConnected(final ServerConnectedEvent event) {
-        writeIfChanged();
+        scheduleWriteIfChanged();
     }
 
     @Subscribe
     public void onDisconnect(final DisconnectEvent event) {
-        writeIfChanged();
+        scheduleWriteIfChanged();
+    }
+
+    private void scheduleWriteIfChanged() {
+        server.getScheduler().buildTask(plugin, this::writeIfChanged).delay(EVENT_SETTLE_DELAY).schedule();
     }
 
     private void writeIfChanged() {

@@ -105,18 +105,17 @@ final class PlayerCountService {
             return;
         }
 
-        final PlayerCountFile snapshot = PlayerCountFile.now(total, servers);
         logger.info("Refreshing {}: total={}, servers={}", outputFile, total, servers);
-        writeAtomic(outputFile, gson.toJson(snapshot));
-        lastWritten.set(snapshot);
+        write(total, servers);
     }
 
     // Rewrites unconditionally, even if the counts haven't changed, so `updated` keeps advancing
     // during quiet periods - see HEARTBEAT_INTERVAL.
     private void heartbeat() {
-        final Map<String, Integer> servers = currentServerCounts();
-        final int total = server.getPlayerCount();
+        write(server.getPlayerCount(), currentServerCounts());
+    }
 
+    private void write(final int total, final Map<String, Integer> servers) {
         final PlayerCountFile snapshot = PlayerCountFile.now(total, servers);
         writeAtomic(outputFile, gson.toJson(snapshot));
         lastWritten.set(snapshot);

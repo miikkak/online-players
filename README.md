@@ -13,11 +13,12 @@ just read it.
 ## How it works
 
 Recomputes counts from Velocity's live state (not incremented/decremented) on every
-`ServerConnectedEvent`/`DisconnectEvent`, and once immediately on startup so the file always
-reflects reality, not just the next connect/disconnect. Writes are skipped when the counts didn't
-actually change, so the file's mtime only moves when the numbers do. Writes
-`online-players.json` under its own plugin data directory (`plugins/online-players/`, relative to
-wherever Velocity runs):
+`ServerConnectedEvent` (`com.velocitypowered.api.event.player.ServerConnectedEvent`) /
+`DisconnectEvent` (`com.velocitypowered.api.event.connection.DisconnectEvent`), and once
+immediately on startup so the file always reflects reality, not just the next connect/disconnect.
+Writes are skipped when the counts didn't actually change, so the file's mtime only moves when the
+numbers do. Writes `online-players.json` under its own plugin data directory
+(`plugins/online-players/`, relative to wherever Velocity runs):
 
 ```json
 {

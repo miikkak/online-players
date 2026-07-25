@@ -51,6 +51,10 @@ final class PlayerCountService {
     // after the event's future resolves) - see totalOf()'s javadoc. Recomputing counts
     // synchronously in the event handler can therefore observe stale per-server state; deferring
     // the recompute by one short tick lets that continuation run first.
+    //
+    // This leans on that ordering as an observed implementation detail, not a documented Velocity
+    // guarantee - if a future Velocity version changes it, counts could go stale again with no
+    // compile-time or test-time signal. If that's ever suspected, check this first.
     private static final Duration EVENT_SETTLE_DELAY = Duration.ofMillis(50);
 
     private final OnlinePlayersPlugin plugin;

@@ -17,7 +17,9 @@ Recomputes counts from Velocity's live state (not incremented/decremented) on ev
 `DisconnectEvent` (`com.velocitypowered.api.event.connection.DisconnectEvent`), and once
 immediately on startup so the file always reflects reality, not just the next connect/disconnect.
 Writes are skipped when the counts didn't actually change, so the file's mtime only moves when the
-numbers do. Writes `online-players.json` under its own plugin data directory
+numbers do - except for a heartbeat every 45 seconds, which rewrites the file unconditionally so
+`updated` keeps advancing during quiet periods with no joins/leaves. Writes `online-players.json`
+under its own plugin data directory
 (`plugins/online-players/`, relative to wherever Velocity runs):
 
 ```json

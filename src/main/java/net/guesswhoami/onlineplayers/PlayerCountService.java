@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -41,6 +42,11 @@ final class PlayerCountService {
     private static final Set<PosixFilePermission> WORLD_READABLE_PERMISSIONS =
             PosixFilePermissions.fromString("rw-rw-r--");
 
+    // Cosmetic freshness only, not a liveness signal - keeps `updated` from going stale-looking
+    // on the public status page during quiet periods with no joins/leaves.
+    private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(45);
+
+    private final OnlinePlayersPlugin plugin;
     private final ProxyServer server;
     private final Path dataDirectory;
     private final Logger logger;
@@ -48,7 +54,12 @@ final class PlayerCountService {
     private final Path outputFile;
     private final AtomicReference<PlayerCountFile> lastWritten = new AtomicReference<>();
 
-    PlayerCountService(final ProxyServer server, final Path dataDirectory, final Logger logger) {
+    PlayerCountService(
+            final OnlinePlayersPlugin plugin,
+            final ProxyServer server,
+            final Path dataDirectory,
+            final Logger logger) {
+        this.plugin = plugin;
         this.server = server;
         this.dataDirectory = dataDirectory;
         this.logger = logger;
@@ -66,7 +77,16 @@ final class PlayerCountService {
         // Reflect current state immediately - don't wait for the next connect/disconnect.
         writeIfChanged();
 
-        logger.info("Writing {} on player connect/disconnect", outputFile);
+        server.getScheduler()
+                .buildTask(plugin, this::heartbeat)
+                .delay(HEARTBEAT_INTERVAL)
+                .repeat(HEARTBEAT_INTERVAL)
+                .schedule();
+
+        logger.info(
+                "Writing {} on player connect/disconnect and every {}",
+                outputFile,
+                HEARTBEAT_INTERVAL);
     }
 
     @Subscribe
@@ -80,12 +100,7 @@ final class PlayerCountService {
     }
 
     private void writeIfChanged() {
-        final Map<String, Integer> servers = new LinkedHashMap<>();
-        for (final RegisteredServer registeredServer : server.getAllServers()) {
-            servers.put(
-                    registeredServer.getServerInfo().getName(),
-                    registeredServer.getPlayersConnected().size());
-        }
+        final Map<String, Integer> servers = currentServerCounts();
         final int total = server.getPlayerCount();
 
         final PlayerCountFile previous = lastWritten.get();
@@ -93,10 +108,30 @@ final class PlayerCountService {
             return;
         }
 
-        final PlayerCountFile snapshot = PlayerCountFile.now(total, servers);
         logger.info("Refreshing {}: total={}, servers={}", outputFile, total, servers);
+        write(total, servers);
+    }
+
+    // Rewrites unconditionally, even if the counts haven't changed, so `updated` keeps advancing
+    // during quiet periods - see HEARTBEAT_INTERVAL.
+    private void heartbeat() {
+        write(server.getPlayerCount(), currentServerCounts());
+    }
+
+    private void write(final int total, final Map<String, Integer> servers) {
+        final PlayerCountFile snapshot = PlayerCountFile.now(total, servers);
         writeAtomic(outputFile, gson.toJson(snapshot));
         lastWritten.set(snapshot);
+    }
+
+    private Map<String, Integer> currentServerCounts() {
+        final Map<String, Integer> servers = new LinkedHashMap<>();
+        for (final RegisteredServer registeredServer : server.getAllServers()) {
+            servers.put(
+                    registeredServer.getServerInfo().getName(),
+                    registeredServer.getPlayersConnected().size());
+        }
+        return servers;
     }
 
     // Package-private (not private) so the permissions behavior is directly unit-testable.

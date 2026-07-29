@@ -40,7 +40,7 @@ final class PlayerCountService {
     // ignores permissions requested that way and creates the file at the umask-restricted default
     // regardless.
     private static final Set<PosixFilePermission> WORLD_READABLE_PERMISSIONS =
-            PosixFilePermissions.fromString("rw-rw-r--");
+            PosixFilePermissions.fromString("rw-r--r--");
 
     // Cosmetic freshness only, not a liveness signal - keeps `updated` from going stale-looking
     // on the public status page during quiet periods with no joins/leaves.
@@ -63,6 +63,7 @@ final class PlayerCountService {
     private final Logger logger;
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private final Path outputFile;
+    private final Object writeLock = new Object();
     private final AtomicReference<PlayerCountFile> lastWritten = new AtomicReference<>();
 
     PlayerCountService(
@@ -114,29 +115,45 @@ final class PlayerCountService {
         server.getScheduler().buildTask(plugin, this::writeIfChanged).delay(EVENT_SETTLE_DELAY).schedule();
     }
 
+    // Velocity dispatches scheduled tasks onto the plugin's cached thread pool, not a single
+    // event-loop thread, so a burst of connect/disconnect events can run their (delayed)
+    // writeIfChanged() calls concurrently with no ordering guarantee between them. Since each
+    // recomputes the snapshot from live state at execution time rather than carrying data
+    // captured earlier, serializing the read-compare-write sequence under writeLock is enough to
+    // guarantee the last write to land reflects the most recently observed state, instead of an
+    // earlier-reading thread's write racing a later one and clobbering it with stale counts.
     private void writeIfChanged() {
-        final Map<String, Integer> servers = currentServerCounts();
-        final int total = totalOf(servers);
+        synchronized (writeLock) {
+            final Map<String, Integer> servers = currentServerCounts();
+            final int total = totalOf(servers);
 
-        final PlayerCountFile previous = lastWritten.get();
-        if (previous != null && previous.sameCounts(total, servers)) {
-            return;
+            final PlayerCountFile previous = lastWritten.get();
+            if (previous != null && previous.sameCounts(total, servers)) {
+                return;
+            }
+
+            logger.info("Refreshing {}: total={}, servers={}", outputFile, total, servers);
+            write(servers);
         }
-
-        logger.info("Refreshing {}: total={}, servers={}", outputFile, total, servers);
-        write(servers);
     }
 
     // Rewrites unconditionally, even if the counts haven't changed, so `updated` keeps advancing
     // during quiet periods - see HEARTBEAT_INTERVAL.
     private void heartbeat() {
-        write(currentServerCounts());
+        synchronized (writeLock) {
+            write(currentServerCounts());
+        }
     }
 
+    // Callers hold writeLock.
     private void write(final Map<String, Integer> servers) {
         final PlayerCountFile snapshot = PlayerCountFile.now(totalOf(servers), servers);
-        writeAtomic(outputFile, gson.toJson(snapshot));
-        lastWritten.set(snapshot);
+        // Only record the snapshot as delivered if the write actually landed - otherwise a
+        // failed write would suppress the next identical-looking writeIfChanged() call via
+        // sameCounts() above, leaving stale JSON on disk until the next heartbeat.
+        if (writeAtomic(outputFile, gson.toJson(snapshot))) {
+            lastWritten.set(snapshot);
+        }
     }
 
     private Map<String, Integer> currentServerCounts() {
@@ -164,7 +181,8 @@ final class PlayerCountService {
     }
 
     // Package-private (not private) so the permissions behavior is directly unit-testable.
-    void writeAtomic(final Path target, final String content) {
+    // Returns whether the write landed, so callers can avoid recording a failed write as delivered.
+    boolean writeAtomic(final Path target, final String content) {
         Path tmp = null;
         try {
             tmp = Files.createTempFile(dataDirectory, target.getFileName().toString(), ".tmp");
@@ -172,8 +190,10 @@ final class PlayerCountService {
             Files.writeString(tmp, content, StandardCharsets.UTF_8);
             Files.move(tmp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             tmp = null; // moved successfully - nothing left to clean up
+            return true;
         } catch (final IOException e) {
             logger.error("Failed to write {}: {}", target, e.getMessage());
+            return false;
         } finally {
             if (tmp != null) {
                 try {

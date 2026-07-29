@@ -18,7 +18,6 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 
 /**
@@ -63,8 +62,9 @@ final class PlayerCountService {
     private final Logger logger;
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private final Path outputFile;
+    // Only ever read/written from within a `synchronized (writeLock)` block below.
     private final Object writeLock = new Object();
-    private final AtomicReference<PlayerCountFile> lastWritten = new AtomicReference<>();
+    private PlayerCountFile lastWritten;
 
     PlayerCountService(
             final OnlinePlayersPlugin plugin,
@@ -127,7 +127,7 @@ final class PlayerCountService {
             final Map<String, Integer> servers = currentServerCounts();
             final int total = totalOf(servers);
 
-            final PlayerCountFile previous = lastWritten.get();
+            final PlayerCountFile previous = lastWritten;
             if (previous != null && previous.sameCounts(total, servers)) {
                 return;
             }
@@ -152,7 +152,7 @@ final class PlayerCountService {
         // failed write would suppress the next identical-looking writeIfChanged() call via
         // sameCounts() above, leaving stale JSON on disk until the next heartbeat.
         if (writeAtomic(outputFile, gson.toJson(snapshot))) {
-            lastWritten.set(snapshot);
+            lastWritten = snapshot;
         }
     }
 

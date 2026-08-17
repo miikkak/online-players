@@ -23,30 +23,20 @@ dependencyLocking {
     lockAllConfigurations()
 }
 
-// velocity-api:4.0.0 transitively declares gson:2.14.0 and wins ordinary "highest version"
-// conflict resolution over our compileOnly 2.8.0 pin below - without this, the compileClasspath
-// silently drifts to 2.14.0 even though the actual Velocity runtime jar bundles 2.8.0 (verified
-// by inspecting META-INF/maven/com.google.code.gson/gson/pom.properties in a production
-// velocity jar), risking a compile-time API surface that doesn't exist at runtime.
-configurations.all {
-    resolutionStrategy {
-        force("com.google.code.gson:gson:2.8.0")
-    }
-}
-
 dependencies {
     compileOnly("com.velocitypowered:velocity-api:4.0.0")
     annotationProcessor("com.velocitypowered:velocity-api:4.0.0")
 
     // Not shaded - already on Velocity's own runtime classpath (Adventure's
-    // GsonComponentSerializer pulls it in; confirmed present in velocity-4.0.0-6.jar).
-    // Pinned to the version actually bundled there so we never compile against an
-    // API newer than what's available at runtime.
-    compileOnly("com.google.code.gson:gson:2.8.0")
+    // GsonComponentSerializer pulls it in). Pinned to the version Gradle actually resolves
+    // velocity-api:4.0.0's own gson dependency to (verify with `./gradlew dependencies
+    // --configuration compileClasspath`) - confirmed byte-for-byte identical to the real
+    // gson-2.14.0.jar by comparing class hashes against a production Velocity runtime jar.
+    compileOnly("com.google.code.gson:gson:2.14.0")
 
     testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("com.google.code.gson:gson:2.8.0")
+    testImplementation("com.google.code.gson:gson:2.14.0")
     testImplementation("com.velocitypowered:velocity-api:4.0.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

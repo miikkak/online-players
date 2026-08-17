@@ -5,8 +5,8 @@
 aopalliance:aopalliance:1.0=annotationProcessor,compileClasspath,testCompileClasspath,testRuntimeClasspath
 com.github.ben-manes.caffeine:caffeine:3.2.3=annotationProcessor,compileClasspath,testCompileClasspath,testRuntimeClasspath
 com.google.auto.service:auto-service-annotations:1.1.1=compileClasspath,testCompileClasspath
-com.google.code.gson:gson:2.8.0=annotationProcessor,compileClasspath,testCompileClasspath,testRuntimeClasspath
-com.google.errorprone:error_prone_annotations:2.47.0=annotationProcessor,compileClasspath,testCompileClasspath,testRuntimeClasspath
+com.google.code.gson:gson:2.14.0=annotationProcessor,compileClasspath,testCompileClasspath,testRuntimeClasspath
+com.google.errorprone:error_prone_annotations:2.48.0=annotationProcessor,compileClasspath,testCompileClasspath,testRuntimeClasspath
 com.google.guava:failureaccess:1.0.3=annotationProcessor,compileClasspath,testCompileClasspath,testRuntimeClasspath
 com.google.guava:guava:33.6.0-jre=annotationProcessor,compileClasspath,testCompileClasspath,testRuntimeClasspath
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava=annotationProcessor,compileClasspath,testCompileClasspath,testRuntimeClasspath

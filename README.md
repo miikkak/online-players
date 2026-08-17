@@ -67,13 +67,14 @@ There is no automated deploy yet - this is manual, on-demand testing only.
   declared dependency's resolved version drifts from the lock - after bumping a version in
   `build.gradle.kts`, regenerate it with `./gradlew dependencies --write-locks` and commit the
   result alongside the change.
-- `gson` is deliberately pinned to `2.8.0` and not shaded - it's the exact version Velocity
-  itself bundles at runtime (verified against `META-INF/maven/com.google.code.gson/gson/pom.properties`
-  in a production Velocity jar). `velocity-api:4.0.0` transitively declares `gson:2.14.0`, which
-  would otherwise win ordinary conflict resolution over this pin - `configurations.all { resolutionStrategy.force(...) }`
-  forces `2.8.0` project-wide so the build can't silently drift onto an API surface that isn't
-  actually on the runtime classpath (was #50, closed once verified). Bumping the pin requires
-  re-verifying against whatever Velocity actually ships, not an automated dependency update (see
+- `gson` is deliberately pinned to `2.14.0` and not shaded - it's the version Gradle actually
+  resolves `velocity-api:4.0.0`'s own gson dependency to (verify with
+  `./gradlew dependencies --configuration compileClasspath`). Confirmed byte-for-byte identical
+  to the real `gson-2.14.0.jar` by hashing `Gson.class` and friends against a production
+  Velocity runtime jar - the jar's own `pom.properties` for gson claims `2.8.0`, but that's
+  stale metadata left over from Velocity's shading process, not what's actually bundled (see
+  #50). Bumping the pin requires re-verifying against whatever Velocity actually ships, not an
+  automated dependency update (see
   `renovate.json`, which excludes it from Renovate for this reason).
 - The plugin's reported version (shown in Velocity's "Loaded plugin ..." log line) is generated
   from the Gradle project version at build time, so it can't drift from the jar filename.

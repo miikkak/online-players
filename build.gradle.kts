@@ -23,6 +23,17 @@ dependencyLocking {
     lockAllConfigurations()
 }
 
+// velocity-api:4.0.0 transitively declares gson:2.14.0 and wins ordinary "highest version"
+// conflict resolution over our compileOnly 2.8.0 pin below - without this, the compileClasspath
+// silently drifts to 2.14.0 even though the actual Velocity runtime jar bundles 2.8.0 (verified
+// by inspecting META-INF/maven/com.google.code.gson/gson/pom.properties in a production
+// velocity jar), risking a compile-time API surface that doesn't exist at runtime.
+configurations.all {
+    resolutionStrategy {
+        force("com.google.code.gson:gson:2.8.0")
+    }
+}
+
 dependencies {
     compileOnly("com.velocitypowered:velocity-api:4.0.0")
     annotationProcessor("com.velocitypowered:velocity-api:4.0.0")

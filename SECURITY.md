@@ -59,7 +59,11 @@ This project uses automated security scanning:
 - **Trivy** (filesystem scan against `gradle.lockfile`) for dependency vulnerability scanning,
   on a weekly schedule and on demand
 - **Renovate** for automated dependency updates
-- AI code review on every pull request
+
+## Other Automated Review
+
+Every pull request also gets an AI code review. This is a general correctness/quality review,
+not a vulnerability scanner - don't rely on it as a substitute for the security scanning above.
 
 ## Disclosure Policy
 

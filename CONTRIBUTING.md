@@ -35,7 +35,10 @@ to the canonical repository, then update it to point to your fork's location.
 
 ## Development Requirements
 
-- JDK 25 (Gradle toolchain-managed - you don't need it pre-installed)
+- A supported bootstrap JVM to launch the Gradle wrapper (`./gradlew`) - JDK 25 itself is
+  provisioned automatically via the Gradle toolchain (Foojay resolver) and doesn't need to be
+  installed separately, but Gradle needs *some* JVM already present to start up in the first
+  place
 - Git
 - Pre-commit hooks
 

@@ -80,7 +80,10 @@ final class PlayerCountService {
 
     // Returns whether startup succeeded, so the caller can skip registering this as an event
     // listener when it didn't - otherwise every subsequent connect/disconnect would retry
-    // writeAtomic() against a data directory that was never created and flood the log.
+    // writeAtomic() against a data directory that can't be written to and flood the log. Covers
+    // both a directory that couldn't be created and one that exists but isn't writable (e.g.
+    // wrong permissions) - the latter fails in exactly the same way on every future write, so
+    // it's just as fatal to startup as the former.
     boolean start() {
         try {
             Files.createDirectories(dataDirectory);
@@ -90,7 +93,9 @@ final class PlayerCountService {
         }
 
         // Reflect current state immediately - don't wait for the next connect/disconnect.
-        writeIfChanged();
+        if (!writeIfChanged()) {
+            return false;
+        }
 
         server.getScheduler()
                 .buildTask(plugin, this::heartbeat)
@@ -126,18 +131,20 @@ final class PlayerCountService {
     // captured earlier, serializing the read-compare-write sequence under writeLock is enough to
     // guarantee the last write to land reflects the most recently observed state, instead of an
     // earlier-reading thread's write racing a later one and clobbering it with stale counts.
-    private void writeIfChanged() {
+    // Returns whether the counts are now correctly reflected on disk - either because a write
+    // just landed, or because the file already matched and nothing needed to change.
+    private boolean writeIfChanged() {
         synchronized (writeLock) {
             final Map<String, Integer> servers = currentServerCounts();
             final int total = totalOf(servers);
 
             final PlayerCountFile previous = lastWritten;
             if (previous != null && previous.sameCounts(total, servers)) {
-                return;
+                return true;
             }
 
             logger.info("Refreshing {}: total={}, servers={}", outputFile, total, servers);
-            write(servers);
+            return write(servers);
         }
     }
 
@@ -149,15 +156,18 @@ final class PlayerCountService {
         }
     }
 
-    // Callers hold writeLock.
-    private void write(final Map<String, Integer> servers) {
+    // Callers hold writeLock. Returns whether the write landed, so start() can tell a persistent
+    // failure (bad permissions, full disk) from a normal startup.
+    private boolean write(final Map<String, Integer> servers) {
         final PlayerCountFile snapshot = PlayerCountFile.now(totalOf(servers), servers);
+        final boolean landed = writeAtomic(outputFile, gson.toJson(snapshot));
         // Only record the snapshot as delivered if the write actually landed - otherwise a
         // failed write would suppress the next identical-looking writeIfChanged() call via
         // sameCounts() above, leaving stale JSON on disk until the next heartbeat.
-        if (writeAtomic(outputFile, gson.toJson(snapshot))) {
+        if (landed) {
             lastWritten = snapshot;
         }
+        return landed;
     }
 
     private Map<String, Integer> currentServerCounts() {

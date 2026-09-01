@@ -15,9 +15,9 @@ import java.util.Objects;
  */
 final class PlayerCountFile {
 
-    private int total;
-    private Map<String, Integer> servers;
-    private String updated;
+    private final int total;
+    private final Map<String, Integer> servers;
+    private final String updated;
 
     PlayerCountFile(final int total, final Map<String, Integer> servers, final String updated) {
         this.total = total;

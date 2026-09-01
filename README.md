@@ -3,6 +3,14 @@
 A Velocity plugin that records network-wide and per-server online player counts to a JSON file
 every time they change.
 
+## About this project
+
+This was built with heavy Claude Code assistance — most of the implementation is AI-generated,
+with the design and review driven by me. It has unit test coverage (`PlayerCountFileTest`,
+`PlayerCountServiceTest`) and runs on my own production Velocity proxy, so it sees real
+day-to-day use, not just its own test suite. Read the source and file issues if something looks
+off.
+
 ## Why
 
 Anything that wants to know "how many players are online right now" - a status page, a
@@ -81,4 +89,4 @@ There is no automated deploy yet - this is manual, on-demand testing only.
 
 ## License
 
-TBD
+[MIT License](LICENSE) - Copyright (c) 2026 Miikka Karhuluoma

@@ -64,7 +64,11 @@ val generateBuildInfo = tasks.register("generateBuildInfo") {
         // Escaped even though releaseVersion is always a well-formed semver-ish string in
         // practice (it comes from a git tag via release.yml) - a malformed manual
         // workflow_dispatch input shouldn't be able to produce broken generated Java source.
-        val escapedVersion = versionValue.replace("\\", "\\\\").replace("\"", "\\\"")
+        val escapedVersion = versionValue
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
         val packageDir = outputDir.get().asFile.resolve("net/guesswhoami/onlineplayers")
         packageDir.mkdirs()
         packageDir.resolve("BuildInfo.java").writeText(

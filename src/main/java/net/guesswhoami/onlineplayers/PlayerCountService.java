@@ -78,12 +78,15 @@ final class PlayerCountService {
         this.outputFile = dataDirectory.resolve("online-players.json");
     }
 
-    void start() {
+    // Returns whether startup succeeded, so the caller can skip registering this as an event
+    // listener when it didn't - otherwise every subsequent connect/disconnect would retry
+    // writeAtomic() against a data directory that was never created and flood the log.
+    boolean start() {
         try {
             Files.createDirectories(dataDirectory);
         } catch (final IOException e) {
             logger.error("Could not create data directory {}: {}", dataDirectory, e.getMessage());
-            return;
+            return false;
         }
 
         // Reflect current state immediately - don't wait for the next connect/disconnect.
@@ -99,6 +102,7 @@ final class PlayerCountService {
                 "Writing {} on player connect/disconnect and every {}",
                 outputFile,
                 HEARTBEAT_INTERVAL);
+        return true;
     }
 
     @Subscribe

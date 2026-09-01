@@ -31,7 +31,8 @@ public class OnlinePlayersPlugin {
     @Subscribe
     public void onProxyInitialize(ProxyInitializeEvent event) {
         final PlayerCountService service = new PlayerCountService(this, server, dataDirectory, logger);
-        server.getEventManager().register(this, service);
-        service.start();
+        if (service.start()) {
+            server.getEventManager().register(this, service);
+        }
     }
 }

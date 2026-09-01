@@ -111,7 +111,7 @@ Before submitting a PR:
 ./gradlew test
 ```
 
-Tests use JUnit 5 (and Mockito where a Velocity API object needs mocking). New behavior should
+Tests use JUnit 6 (and Mockito where a Velocity API object needs mocking). New behavior should
 come with a test; bug fixes should come with a test that fails before the fix and passes after.
 
 ## CI/CD Pipeline

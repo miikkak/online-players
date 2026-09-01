@@ -7,8 +7,11 @@ import java.util.Objects;
 /**
  * Snapshot written to {@code online-players.json} for external readers (scripts, website).
  *
- * <p>Deliberately a plain mutable class, not a record: Velocity 4.0.0 bundles Gson 2.8.0 (which
- * predates Gson's record support, added in 2.10).
+ * <p>A plain mutable class, not a record — historically because the Gson version this project
+ * appeared to target predated record support, but the actually-bundled version (2.14.0, see the
+ * {@code gson} dependency comment in {@code build.gradle.kts}) does support records, so that
+ * reasoning no longer applies. Left as a plain class for now as a style choice, not a technical
+ * constraint; converting to a record would be a reasonable follow-up.
  */
 final class PlayerCountFile {
 

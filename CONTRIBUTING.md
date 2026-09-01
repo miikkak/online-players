@@ -26,8 +26,12 @@ references:
 2. **`SECURITY.md`**
    - Update the GitHub Security Advisories URL to point to your fork
 
-These references are intentionally hardcoded as they point to the canonical repository. After
-forking, update them to point to your fork's location.
+3. **`README.md`**
+   - Update the `gh release download vX.Y.Z -R miikkak/online-players ...` command under
+     "Testing a release build" to point to your fork
+
+This list isn't exhaustive - grep for `miikkak` across the repo to catch anything else hardcoded
+to the canonical repository, then update it to point to your fork's location.
 
 ## Development Requirements
 
@@ -41,7 +45,15 @@ This project maintains high code quality standards using automated tooling:
 
 ### Pre-commit Hooks
 
-All commits must pass pre-commit hooks. Install them with:
+All commits must pass pre-commit hooks. Install the `pre-commit` tool itself first (see
+[pre-commit.com's installation guide](https://pre-commit.com/#installation) for other methods,
+e.g. your OS package manager):
+
+```bash
+pip install pre-commit
+```
+
+Then register the hooks for this repo:
 
 ```bash
 pre-commit install
